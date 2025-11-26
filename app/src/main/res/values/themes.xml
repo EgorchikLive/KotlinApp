@@ -1,0 +1,35 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Базовая тема -->
+    <style name="Theme.KotlinApp" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+        <item name="colorPrimary">@color/green_500</item>
+        <item name="colorPrimaryDark">@color/green_700</item>
+        <item name="colorAccent">@color/teal_200</item>
+
+        <!-- Стиль для ActionBar -->
+        <item name="actionBarStyle">@style/MyActionBarStyle</item>
+        <item name="actionMenuTextColor">@android:color/white</item>
+    </style>
+
+    <!-- Тема БЕЗ ActionBar для MainActivity и ProfileActivity -->
+    <style name="Theme.KotlinApp.NoActionBar" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/green_500</item>
+        <item name="colorPrimaryDark">@color/green_700</item>
+        <item name="colorAccent">@color/teal_200</item>
+        <item name="actionMenuTextColor">@android:color/white</item>
+    </style>
+
+    <!-- Кастомный стиль для ActionBar -->
+    <style name="MyActionBarStyle" parent="Widget.AppCompat.ActionBar.Solid">
+        <item name="titleTextStyle">@style/MyTitleTextStyle</item>
+        <item name="height">80dp</item>
+    </style>
+
+    <!-- Стиль для заголовка -->
+    <style name="MyTitleTextStyle" parent="TextAppearance.AppCompat.Widget.ActionBar.Title">
+        <item name="android:textColor">@android:color/white</item>
+        <item name="android:textSize">20sp</item>
+    </style>
+
+    <style name="Theme.KotlinApp.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
+    <style name="Theme.KotlinApp.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+</resources>
