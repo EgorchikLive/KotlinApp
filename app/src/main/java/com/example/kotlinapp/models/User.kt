@@ -7,7 +7,8 @@ data class User(
     val email: String = "",
     val fullName: String = "",
     val photoUrl: String = "",
-    val provider: String = "email", // "email" или "google"
+    val provider: String = "email",
+    val role: String = "user", // "user" или "admin"
     val createdAt: Date = Date(),
     val lastLogin: Date = Date(),
     val emailVerified: Boolean = false

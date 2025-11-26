@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="2dp"
+    app:cardCornerRadius="4dp"
+    app:cardElevation="2dp"
+    app:cardUseCompatPadding="true">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="8dp">
+
+        <ImageView
+            android:id="@+id/product_image"
+            android:layout_width="match_parent"
+            android:layout_height="100dp"
+            android:scaleType="centerCrop"
+            android:src="@drawable/ic_placeholder"
+            tools:src="@tools:sample/avatars" />
+
+        <!-- Метка "Нет в наличии" -->
+        <TextView
+            android:id="@+id/out_of_stock_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignTop="@id/product_image"
+            android:layout_alignEnd="@id/product_image"
+            android:background="@color/red"
+            android:padding="2dp"
+        android:text="Нет в наличии"
+        android:textColor="@android:color/white"
+        android:textSize="8sp"
+        android:visibility="gone" />
+
+        <!-- Название товара -->
+        <TextView
+            android:id="@+id/product_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/product_image"
+            android:layout_marginTop="4dp"
+        android:ellipsize="end"
+        android:maxLines="2"
+        android:text="Название товара"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+
+        <!-- Рейтинг -->
+        <TextView
+            android:id="@+id/product_rating"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/product_name"
+            android:layout_marginTop="2dp"
+            android:text="★ 4.5"
+            android:textColor="@color/gray"
+            android:textSize="10sp" />
+
+        <!-- Цена -->
+        <TextView
+            android:id="@+id/product_price"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/product_rating"
+            android:layout_marginTop="2dp"
+            android:text="$99.99"
+            android:textColor="@color/green_500"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+    </RelativeLayout>
+
+</androidx.cardview.widget.CardView>
+    </layout>
