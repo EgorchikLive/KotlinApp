@@ -20,12 +20,10 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Инициализируем binding для кастомного AppBar
         appBarBinding = CustomAppbarBinding.bind(binding.root)
 
         auth = FirebaseAuth.getInstance()
 
-        // Проверяем авторизацию
         if (auth.currentUser == null) {
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
@@ -37,23 +35,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupAppBar() {
-        // Устанавливаем начальный заголовок
         appBarBinding.toolbarTitle.text = "Главная"
-
-        // Настраиваем клик на иконку профиля
         appBarBinding.profileButton.setOnClickListener {
             val intent = Intent(this, ProfileActivity::class.java)
             startActivity(intent)
-        }
-
-        // Принудительно выравниваем элементы по вертикали
-        appBarBinding.root.post {
-            // Убеждаемся, что текст и иконка на одном уровне
-            val textView = appBarBinding.toolbarTitle
-            val imageButton = appBarBinding.profileButton
-
-            // Выравниваем по центру вертикали родительского контейнера
-            textView.gravity = android.view.Gravity.CENTER_VERTICAL
         }
     }
 
@@ -79,14 +64,13 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Устанавливаем начальный фрагмент
         replaceFragment(HomeFragment())
     }
 
     private fun replaceFragment(fragment: Fragment) {
-        val fragmentManager = supportFragmentManager
-        val fragmentTransaction = fragmentManager.beginTransaction()
-        fragmentTransaction.replace(R.id.fragment_container, fragment)
-        fragmentTransaction.commit()
+        // Используем commitNow вместо commit для немедленного выполнения
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.fragment_container, fragment)
+            .commitNow()
     }
 }

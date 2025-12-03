@@ -5,30 +5,31 @@ import android.graphics.Rect
 import android.os.Bundle
 import android.view.*
 import android.widget.Toast
-import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.example.kotlinapp.databinding.FragmentHomeBinding
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import kotlinx.coroutines.tasks.await
 
-class HomeFragment : Fragment() {
+class HomeFragment : SafeFragment() {
 
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
     private lateinit var productAdapter: ProductAdapter
     private lateinit var productRepository: ProductRepository
+    private lateinit var favoritesRepository: FavoritesRepository
     private lateinit var auth: FirebaseAuth
     private lateinit var db: FirebaseFirestore
     private var isAdmin = false
 
+    // Job для отслеживания загрузки продуктов
+    private var productsLoadJob: Job? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setHasOptionsMenu(true) // Включаем меню в фрагменте
+        setHasOptionsMenu(true)
     }
 
     override fun onCreateView(
@@ -46,36 +47,51 @@ class HomeFragment : Fragment() {
         auth = FirebaseAuth.getInstance()
         db = FirebaseFirestore.getInstance()
         productRepository = ProductRepository()
+        favoritesRepository = FavoritesRepository()
 
-        checkUserRole()
         setupRecyclerView()
         loadProducts()
+        checkUserRole()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Отменяем загрузку при остановке фрагмента
+        productsLoadJob?.cancel()
     }
 
     private fun checkUserRole() {
         val currentUser = auth.currentUser
-        currentUser?.let { user ->
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    val userDoc = db.collection("users").document(user.uid).get().await()
-                    val userData = userDoc.toObject(User::class.java)
+        if (currentUser == null) {
+            isAdmin = false
+            binding.fabAddProduct.visibility = View.GONE
+            return
+        }
 
-                    CoroutineScope(Dispatchers.Main).launch {
-                        isAdmin = userData?.role == "admin"
-                        activity?.invalidateOptionsMenu() // Обновляем меню
-
-                        if (isAdmin) {
-                            binding.fabAddProduct.visibility = View.VISIBLE
-                        } else {
-                            binding.fabAddProduct.visibility = View.GONE
-                        }
-                    }
-                } catch (e: Exception) {
-                    CoroutineScope(Dispatchers.Main).launch {
-                        isAdmin = false
-                        binding.fabAddProduct.visibility = View.GONE
-                    }
+        safeLaunch {
+            try {
+                val userDoc = withContext(Dispatchers.IO) {
+                    db.collection("users").document(currentUser.uid).get().await()
                 }
+                val userData = userDoc.toObject(User::class.java)
+
+                isAdmin = userData?.role == "admin"
+                activity?.invalidateOptionsMenu()
+
+                if (isAdmin) {
+                    binding.fabAddProduct.visibility = View.VISIBLE
+                } else {
+                    binding.fabAddProduct.visibility = View.GONE
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                isAdmin = false
+                binding.fabAddProduct.visibility = View.GONE
             }
         }
     }
@@ -84,7 +100,6 @@ class HomeFragment : Fragment() {
         val gridLayoutManager = GridLayoutManager(requireContext(), 2)
         binding.productsRecyclerView.layoutManager = gridLayoutManager
 
-        // Добавляем кастомные отступы
         binding.productsRecyclerView.addItemDecoration(object : RecyclerView.ItemDecoration() {
             override fun getItemOffsets(
                 outRect: Rect,
@@ -100,8 +115,8 @@ class HomeFragment : Fragment() {
             }
         })
 
-        // Создаем адаптер с поддержкой долгого нажатия для админа
-        productAdapter = ProductAdapter(emptyList(),
+        productAdapter = ProductAdapter(
+            emptyList(),
             onItemClick = { product ->
                 openProductDetail(product)
             },
@@ -110,37 +125,63 @@ class HomeFragment : Fragment() {
                     showProductActionsDialog(product)
                 }
                 true
+            },
+            onFavoriteClick = { product, isFavorite ->
+                handleFavoriteClick(product, isFavorite)
             }
         )
 
         binding.productsRecyclerView.adapter = productAdapter
 
-        // Кнопка добавления товара (только для админа)
         binding.fabAddProduct.setOnClickListener {
             if (isAdmin) {
                 openAddProductActivity()
+            } else {
+                Toast.makeText(requireContext(), "Доступно только для администраторов", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
     private fun loadProducts() {
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val products = productRepository.getAllProducts()
+        // Отменяем предыдущую загрузку
+        productsLoadJob?.cancel()
 
-                CoroutineScope(Dispatchers.Main).launch {
-                    if (products.isEmpty()) {
-                        binding.emptyState.visibility = View.VISIBLE
-                        binding.productsRecyclerView.visibility = View.GONE
-                    } else {
-                        binding.emptyState.visibility = View.GONE
-                        binding.productsRecyclerView.visibility = View.VISIBLE
-                        productAdapter.updateProducts(products)
-                    }
+        productsLoadJob = safeLaunch {
+            try {
+                binding.progressBar.visibility = View.VISIBLE
+                binding.emptyState.visibility = View.GONE
+
+                val products = withContext(Dispatchers.IO) {
+                    // Проверяем активность перед длительной операцией
+                    if (!isActive) return@withContext emptyList<Product>()
+                    productRepository.getAllProducts()
+                }
+
+                // Проверяем, что фрагмент еще отображается
+                if (!isAdded || view == null) return@safeLaunch
+
+                if (products.isEmpty()) {
+                    binding.emptyState.visibility = View.VISIBLE
+                    binding.productsRecyclerView.visibility = View.GONE
+                } else {
+                    binding.emptyState.visibility = View.GONE
+                    binding.productsRecyclerView.visibility = View.VISIBLE
+                    productAdapter.updateProducts(products)
                 }
             } catch (e: Exception) {
-                CoroutineScope(Dispatchers.Main).launch {
+                if (e is CancellationException) {
+                    // Игнорируем отмену
+                    return@safeLaunch
+                }
+
+                // Показываем ошибку только если фрагмент видим
+                if (isAdded && view != null) {
                     Toast.makeText(requireContext(), "Ошибка загрузки товаров", Toast.LENGTH_SHORT).show()
+                }
+            } finally {
+                // Убираем прогресс бар только если фрагмент активен
+                if (isAdded && view != null) {
+                    binding.progressBar.visibility = View.GONE
                 }
             }
         }
@@ -153,6 +194,9 @@ class HomeFragment : Fragment() {
             putExtra("PRODUCT_PRICE", product.price)
             putExtra("PRODUCT_IMAGE", product.imageUrl)
             putExtra("PRODUCT_DESCRIPTION", product.description)
+            putExtra("PRODUCT_CATEGORY", product.category)
+            putExtra("PRODUCT_IN_STOCK", product.inStock)
+            putExtra("PRODUCT_RATING", product.rating)
             putExtra("IS_ADMIN", isAdmin)
         }
         startActivity(intent)
@@ -197,14 +241,23 @@ class HomeFragment : Fragment() {
             .setTitle("Удаление товара")
             .setMessage("Вы уверены, что хотите удалить \"${product.name}\"?")
             .setPositiveButton("Удалить") { _, _ ->
-                CoroutineScope(Dispatchers.IO).launch {
-                    val success = productRepository.deleteProduct(product.id)
+                safeLaunch {
+                    try {
+                        val success = withContext(Dispatchers.IO) {
+                            if (!isActive) return@withContext false
+                            productRepository.deleteProduct(product.id)
+                        }
 
-                    CoroutineScope(Dispatchers.Main).launch {
-                        if (success) {
-                            Toast.makeText(requireContext(), "Товар удален", Toast.LENGTH_SHORT).show()
-                            loadProducts() // Перезагружаем список
-                        } else {
+                        if (isAdded) {
+                            if (success) {
+                                Toast.makeText(requireContext(), "Товар удален", Toast.LENGTH_SHORT).show()
+                                loadProducts()
+                            } else {
+                                Toast.makeText(requireContext(), "Ошибка удаления", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    } catch (e: Exception) {
+                        if (e !is CancellationException && isAdded) {
                             Toast.makeText(requireContext(), "Ошибка удаления", Toast.LENGTH_SHORT).show()
                         }
                     }
@@ -214,7 +267,36 @@ class HomeFragment : Fragment() {
             .show()
     }
 
-    // Функция для массовой загрузки тестовых данных
+    private fun handleFavoriteClick(product: Product, isFavorite: Boolean) {
+        safeLaunch {
+            try {
+                val success = withContext(Dispatchers.IO) {
+                    if (!isActive) return@withContext false
+                    if (isFavorite) {
+                        favoritesRepository.addToFavorites(product)
+                    } else {
+                        favoritesRepository.removeFromFavorites(product.id)
+                    }
+                }
+
+                if (isAdded && success) {
+                    val message = if (isFavorite) {
+                        "Товар добавлен в избранное"
+                    } else {
+                        "Товар удален из избранного"
+                    }
+                    Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+                    productAdapter.updateFavoriteStatus(product.id, isFavorite)
+                }
+            } catch (e: Exception) {
+                if (e !is CancellationException && isAdded) {
+                    Toast.makeText(requireContext(), "Ошибка", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    // Метод для массовой загрузки тестовых данных
     private fun bulkLoadSampleProducts() {
         val sampleProducts = listOf(
             Product(
@@ -273,14 +355,21 @@ class HomeFragment : Fragment() {
             )
         )
 
-        CoroutineScope(Dispatchers.IO).launch {
-            val success = productRepository.bulkAddProducts(sampleProducts)
+        safeLaunch {
+            try {
+                val success = withContext(Dispatchers.IO) {
+                    if (!isActive) return@withContext false
+                    productRepository.bulkAddProducts(sampleProducts)
+                }
 
-            CoroutineScope(Dispatchers.Main).launch {
-                if (success) {
+                if (isAdded && success) {
                     Toast.makeText(requireContext(), "Товары загружены в Firestore", Toast.LENGTH_SHORT).show()
-                    loadProducts() // Перезагружаем список
-                } else {
+                    loadProducts()
+                } else if (isAdded) {
+                    Toast.makeText(requireContext(), "Ошибка загрузки товаров", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                if (e !is CancellationException && isAdded) {
                     Toast.makeText(requireContext(), "Ошибка загрузки товаров", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -289,11 +378,8 @@ class HomeFragment : Fragment() {
 
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
         inflater.inflate(R.menu.home_menu, menu)
-
-        // Показываем пункт меню только для админа
         val bulkLoadItem = menu.findItem(R.id.action_bulk_load)
         bulkLoadItem.isVisible = isAdmin
-
         super.onCreateOptionsMenu(menu, inflater)
     }
 
@@ -309,13 +395,7 @@ class HomeFragment : Fragment() {
         }
     }
 
-    // Extension function для конвертации dp в px
     private fun Int.dpToPx(context: android.content.Context): Int {
         return (this * context.resources.displayMetrics.density).toInt()
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
     }
 }
