@@ -28,21 +28,31 @@
             android:layout_marginStart="16dp"
             android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/textProductName"
+            <!-- Название и цена в одной строке -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
 
-            <TextView
-                android:id="@+id/textProductPrice"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textSize="14sp"
-                android:textColor="@color/colorPrimary"
-                android:layout_marginTop="4dp" />
+                <TextView
+                    android:id="@+id/textProductName"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
 
+                <TextView
+                    android:id="@+id/textProductPrice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="14sp"
+                    android:textColor="@color/colorPrimary" />
+
+            </LinearLayout>
+
+            <!-- Количество и кнопки управления -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -50,12 +60,13 @@
                 android:layout_marginTop="8dp"
                 android:gravity="center_vertical">
 
-                <Button
+                <ImageButton
                     android:id="@+id/btnDecrease"
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
-                    android:text="-"
-                    style="@style/Widget.AppCompat.Button.Borderless" />
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/ic_remove"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Уменьшить количество" />
 
                 <TextView
                     android:id="@+id/textQuantity"
@@ -64,12 +75,13 @@
                     android:gravity="center"
                     android:textSize="16sp" />
 
-                <Button
+                <ImageButton
                     android:id="@+id/btnIncrease"
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
-                    android:text="+"
-                    style="@style/Widget.AppCompat.Button.Borderless" />
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/ic_add"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Увеличить количество" />
 
                 <TextView
                     android:id="@+id/textItemTotal"
@@ -80,15 +92,16 @@
                     android:textSize="16sp"
                     android:textStyle="bold" />
 
-            </LinearLayout>
+                <!-- Кнопка с корзиной вместо "Удалить" -->
+                <ImageButton
+                    android:id="@+id/btnRemove"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/ic_delete"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Удалить товар" />
 
-            <Button
-                android:id="@+id/btnRemove"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Удалить"
-                android:layout_marginTop="8dp"
-                style="@style/Widget.AppCompat.Button.Borderless.Colored" />
+            </LinearLayout>
 
         </LinearLayout>
 

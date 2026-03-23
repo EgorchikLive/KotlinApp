@@ -4,11 +4,11 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContentProviderCompat.requireContext
 import com.example.kotlinapp.databinding.ActivityEditProductBinding
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class EditProductActivity : AppCompatActivity() {
 
@@ -54,6 +54,13 @@ class EditProductActivity : AppCompatActivity() {
             binding.productRating.setText(intent.getDoubleExtra("PRODUCT_RATING", 0.0).toString())
         } else {
             binding.toolbar.title = "Добавить товар"
+            // Очищаем поля при добавлении нового товара
+            binding.productName.setText("")
+            binding.productPrice.setText("")
+            binding.productDescription.setText("")
+            binding.productCategory.setText("")
+            binding.switchInStock.isChecked = true
+            binding.productRating.setText("0.0")
         }
     }
 
@@ -71,8 +78,14 @@ class EditProductActivity : AppCompatActivity() {
         val inStock = binding.switchInStock.isChecked
         val ratingText = binding.productRating.text.toString().trim()
 
-        if (name.isEmpty() || priceText.isEmpty()) {
-            Toast.makeText(this, "Заполните обязательные поля", Toast.LENGTH_SHORT).show()
+        // Валидация
+        if (name.isEmpty()) {
+            Toast.makeText(this, "Введите название товара", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (priceText.isEmpty()) {
+            Toast.makeText(this, "Введите цену товара", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -84,13 +97,14 @@ class EditProductActivity : AppCompatActivity() {
         }
 
         val rating = try {
-            ratingText.toDouble()
+            ratingText.toDouble().coerceIn(0.0, 5.0)
         } catch (e: NumberFormatException) {
             0.0
         }
 
+        // Создаем продукт (без ID для новых товаров)
         val product = Product(
-            id = productId,
+            id = if (isEditMode) productId else "", // Пустой ID для новых товаров
             name = name,
             price = price,
             imageUrl = "https://via.placeholder.com/300", // В реальном приложении загрузка изображения
@@ -100,19 +114,57 @@ class EditProductActivity : AppCompatActivity() {
             rating = rating
         )
 
-        CoroutineScope(Dispatchers.IO).launch {
-            val success = productRepository.addProduct(product)
+        // Показываем индикатор загрузки
+        binding.btnSave.isEnabled = false
+        binding.btnSave.text = "Сохранение..."
 
-            CoroutineScope(Dispatchers.Main).launch {
-                if (success) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val result = if (isEditMode) {
+                    // Обновляем существующий товар
+                    val success = productRepository.updateProduct(product)
+                    if (success) product else null
+                } else {
+                    // Создаем новый товар и получаем его с ID
+                    productRepository.addProduct(product)
+                }
+
+                withContext(Dispatchers.Main) {
+                    binding.btnSave.isEnabled = true
+                    binding.btnSave.text = if (isEditMode) "Сохранить" else "Добавить"
+
+                    if (result != null) {
+                        val message = if (isEditMode) "Товар обновлен" else "Товар добавлен"
+                        Toast.makeText(
+                            this@EditProductActivity,
+                            message,
+                            Toast.LENGTH_SHORT
+                        ).show()
+
+                        // Возвращаем результат
+                        val intent = Intent().apply {
+                            putExtra("PRODUCT_ID", result.id)
+                            putExtra("PRODUCT_NAME", result.name)
+                        }
+                        setResult(RESULT_OK, intent)
+                        finish()
+                    } else {
+                        Toast.makeText(
+                            this@EditProductActivity,
+                            "Ошибка сохранения",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    binding.btnSave.isEnabled = true
+                    binding.btnSave.text = if (isEditMode) "Сохранить" else "Добавить"
                     Toast.makeText(
                         this@EditProductActivity,
-                        if (isEditMode) "Товар обновлен" else "Товар добавлен",
+                        "Ошибка: ${e.message}",
                         Toast.LENGTH_SHORT
                     ).show()
-                    finish()
-                } else {
-                    Toast.makeText(this@EditProductActivity, "Ошибка сохранения", Toast.LENGTH_SHORT).show()
                 }
             }
         }

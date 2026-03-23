@@ -1,31 +1,60 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+    xmlns:app="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="NamespaceTypo">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical">
 
+        <!-- Тулбар с высотой 80dp как на главной -->
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
+            android:layout_height="80dp"
             android:background="?attr/colorPrimary"
-            app:title="Детали товара"
-            app:titleTextColor="@android:color/white" />
+            android:minHeight="80dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            app:title=""
+            app:titleTextColor="@android:color/white"
+            app:contentInsetStartWithNavigation="0dp"
+            app:contentInsetStart="0dp">
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <TextView
+                    android:paddingTop="16dp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:text="KotlinApp"
+                    android:textColor="@android:color/white"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+            </RelativeLayout>
+
+        </androidx.appcompat.widget.Toolbar>
 
         <ScrollView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:padding="16dp">
 
+            <!-- Остальной контент -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <!-- Изображение товара -->
                 <ImageView
                     android:id="@+id/product_image"
                     android:layout_width="match_parent"
@@ -33,7 +62,6 @@
                     android:scaleType="centerCrop"
                     android:src="@drawable/ic_placeholder" />
 
-                <!-- Название товара -->
                 <TextView
                     android:id="@+id/product_name"
                     android:layout_width="match_parent"
@@ -43,7 +71,6 @@
                     android:textSize="24sp"
                     android:textStyle="bold" />
 
-                <!-- Цена -->
                 <TextView
                     android:id="@+id/product_price"
                     android:layout_width="match_parent"
@@ -54,7 +81,14 @@
                     android:textSize="28sp"
                     android:textStyle="bold" />
 
-                <!-- Описание -->
+                <TextView
+                    android:id="@+id/product_rating"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="★ 0.0"
+                    android:textSize="14sp" />
+
                 <TextView
                     android:id="@+id/product_description"
                     android:layout_width="match_parent"
@@ -64,30 +98,39 @@
                     android:text="Описание товара"
                     android:textSize="16sp" />
 
-                <!-- Кнопки действий -->
+                <TextView
+                    android:id="@+id/stock_status"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="В наличии"
+                    android:textSize="14sp"
+                    android:visibility="gone" />
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="32dp"
-                    android:orientation="horizontal">
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <ImageButton
+                        android:id="@+id/btnFavorite"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:scaleType="center"
+                        android:src="@drawable/ic_favorite_border"
+                        android:contentDescription="Добавить в избранное" />
 
                     <Button
                         android:id="@+id/btn_add_to_cart"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginEnd="8dp"
-                        android:layout_weight="1"
-                        android:backgroundTint="@color/gray"
-                        android:text="В корзину"
-                        android:textColor="@android:color/white" />
-
-                    <Button
-                        android:id="@+id/btn_buy_now"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
                         android:layout_weight="1"
-                        android:text="Купить сейчас" />
+                        android:text="В корзину"
+                        android:enabled="true" />
 
                 </LinearLayout>
 

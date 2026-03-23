@@ -11,6 +11,7 @@ import kotlin.coroutines.coroutineContext
 class FavoritesRepository {
     private val db = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
+    private val productRepository = ProductRepository()
 
     private fun getCurrentUserId(): String? {
         return auth.currentUser?.uid
@@ -44,14 +45,13 @@ class FavoritesRepository {
                 .get()
                 .await()
 
-            return if (existingItemQuery.documents.isEmpty()) {
+            if (existingItemQuery.documents.isEmpty()) {
                 val favoriteItem = FavoriteItem(
                     id = favoritesCollection.document().id,
                     productId = product.id,
                     productName = product.name,
                     productPrice = product.price,
                     productImageUrl = product.imageUrl,
-                    // Не добавляем description и category
                     addedAt = Date()
                 )
                 favoritesCollection.document(favoriteItem.id).set(favoriteItem).await()
@@ -106,6 +106,7 @@ class FavoritesRepository {
         }
     }
 
+    // Метод возвращает список продуктов, которые в избранном
     suspend fun getFavoriteProducts(): List<Product> {
         return try {
             val favorites = getFavorites()
@@ -113,17 +114,10 @@ class FavoritesRepository {
 
             if (productIds.isEmpty()) return emptyList()
 
-            val products = mutableListOf<Product>()
-            val productRepo = ProductRepository()
-            val allProducts = productRepo.getAllProducts()
-
-            favorites.forEach { favorite ->
-                allProducts.find { it.id == favorite.productId }?.let { product ->
-                    products.add(product)
-                }
+            val allProducts = productRepository.getAllProducts()
+            allProducts.filter { product ->
+                productIds.contains(product.id)
             }
-
-            products
         } catch (e: Exception) {
             emptyList()
         }

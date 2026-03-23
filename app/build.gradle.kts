@@ -55,6 +55,7 @@ dependencies {
     implementation("androidx.navigation:navigation-fragment-ktx:2.6.0")
     implementation("androidx.navigation:navigation-ui-ktx:2.6.0")
     implementation("com.github.bumptech.glide:glide:4.16.0")
+    implementation("com.squareup.picasso:picasso:2.8")
 
     // Firebase
     implementation("com.google.firebase:firebase-auth")
@@ -63,6 +64,9 @@ dependencies {
     // Lifecycle
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.7.0")
+//    implementation(libs.firebase.storage.ktx)
+//
+//    annotationProcessor ("com.github.bumptech.glide:compiler:4.16.0")
 
     // Navigation
     implementation("androidx.navigation:navigation-fragment-ktx:2.7.5")

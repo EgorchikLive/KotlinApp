@@ -8,11 +8,15 @@ import com.example.kotlinapp.databinding.ActivityProductDetailBinding
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class ProductDetailActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityProductDetailBinding
     private lateinit var cartRepository: CartRepository
+    private lateinit var favoritesRepository: FavoritesRepository
+    private var currentProduct: Product? = null
+    private var isFavorite = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -20,10 +24,12 @@ class ProductDetailActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         cartRepository = CartRepository()
+        favoritesRepository = FavoritesRepository()
 
         setupToolbar()
         loadProductData()
         setupClickListeners()
+        checkFavoriteStatus()
     }
 
     private fun setupToolbar() {
@@ -38,7 +44,7 @@ class ProductDetailActivity : AppCompatActivity() {
 
     private fun loadProductData() {
         // Получаем данные из Intent
-        val product = Product(
+        currentProduct = Product(
             id = intent.getStringExtra("PRODUCT_ID") ?: "",
             name = intent.getStringExtra("PRODUCT_NAME") ?: "",
             price = intent.getDoubleExtra("PRODUCT_PRICE", 0.0),
@@ -49,78 +55,200 @@ class ProductDetailActivity : AppCompatActivity() {
             rating = intent.getDoubleExtra("PRODUCT_RATING", 0.0)
         )
 
-        // Устанавливаем данные
-        binding.toolbar.title = product.name
-        binding.productName.text = product.name
-        binding.productPrice.text = "$${product.price}"
-        binding.productDescription.text = product.description
+        currentProduct?.let { product ->
+            // Устанавливаем данные
+            binding.toolbar.title = product.name
+            binding.productName.text = product.name
+            binding.productPrice.text = "$${product.price}"
+            binding.productDescription.text = product.description
 
-        // Загружаем изображение
-        if (product.imageUrl.isNotEmpty()) {
-            Glide.with(this)
-                .load(product.imageUrl)
-                .placeholder(R.drawable.ic_placeholder)
-                .into(binding.productImage)
+            // Отображаем рейтинг
+            displayRating(product.rating)
+
+            // Отображаем статус наличия
+            if (!product.inStock) {
+                binding.stockStatus.visibility = android.view.View.VISIBLE
+                binding.stockStatus.text = "Нет в наличии"
+                binding.stockStatus.setTextColor(getColor(android.R.color.holo_red_dark))
+                binding.btnAddToCart.isEnabled = false
+            } else {
+                binding.stockStatus.visibility = android.view.View.GONE
+                binding.btnAddToCart.isEnabled = true
+            }
+
+            // Загружаем изображение
+            if (product.imageUrl.isNotEmpty()) {
+                Glide.with(this)
+                    .load(product.imageUrl)
+                    .placeholder(R.drawable.ic_placeholder)
+                    .error(R.drawable.ic_error_image)
+                    .into(binding.productImage)
+            }
         }
     }
 
-    private fun setupClickListeners() {
-        binding.btnAddToCart.setOnClickListener {
-            val product = Product(
-                id = intent.getStringExtra("PRODUCT_ID") ?: "",
-                name = intent.getStringExtra("PRODUCT_NAME") ?: "",
-                price = intent.getDoubleExtra("PRODUCT_PRICE", 0.0),
-                imageUrl = intent.getStringExtra("PRODUCT_IMAGE") ?: "",
-                description = intent.getStringExtra("PRODUCT_DESCRIPTION") ?: "",
-                category = intent.getStringExtra("PRODUCT_CATEGORY") ?: "",
-                inStock = intent.getBooleanExtra("PRODUCT_IN_STOCK", true),
-                rating = intent.getDoubleExtra("PRODUCT_RATING", 0.0)
-            )
+    private fun displayRating(rating: Double) {
+        // Форматируем рейтинг до 1 знака после запятой
+        val formattedRating = String.format("%.1f", rating)
 
-            addToCart(product)
+        // Создаем строку с звездочками
+        val stars = when {
+            rating >= 4.5 -> "★★★★★"
+            rating >= 4.0 -> "★★★★☆"
+            rating >= 3.0 -> "★★★☆☆"
+            rating >= 2.0 -> "★★☆☆☆"
+            rating >= 1.0 -> "★☆☆☆☆"
+            else -> "☆☆☆☆☆"
         }
 
-        binding.btnBuyNow.setOnClickListener {
-            val product = Product(
-                id = intent.getStringExtra("PRODUCT_ID") ?: "",
-                name = intent.getStringExtra("PRODUCT_NAME") ?: "",
-                price = intent.getDoubleExtra("PRODUCT_PRICE", 0.0),
-                imageUrl = intent.getStringExtra("PRODUCT_IMAGE") ?: "",
-                description = intent.getStringExtra("PRODUCT_DESCRIPTION") ?: "",
-                category = intent.getStringExtra("PRODUCT_CATEGORY") ?: "",
-                inStock = intent.getBooleanExtra("PRODUCT_IN_STOCK", true),
-                rating = intent.getDoubleExtra("PRODUCT_RATING", 0.0)
-            )
+        // Устанавливаем текст с рейтингом
+        binding.productRating.text = "$stars $formattedRating"
 
+        // Опционально: меняем цвет в зависимости от рейтинга
+        when {
+            rating >= 4.0 -> binding.productRating.setTextColor(getColor(android.R.color.holo_orange_dark))
+            rating >= 3.0 -> binding.productRating.setTextColor(getColor(android.R.color.holo_blue_dark))
+            rating >= 2.0 -> binding.productRating.setTextColor(getColor(android.R.color.holo_green_dark))
+            else -> binding.productRating.setTextColor(getColor(android.R.color.darker_gray))
+        }
+    }
+
+    private fun checkFavoriteStatus() {
+        currentProduct?.let { product ->
             CoroutineScope(Dispatchers.IO).launch {
-                cartRepository.addToCart(product)
-
-                CoroutineScope(Dispatchers.Main).launch {
-                    Toast.makeText(
-                        this@ProductDetailActivity,
-                        "Товар добавлен в корзину. Переход к оформлению заказа",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                try {
+                    val favorite = favoritesRepository.isProductInFavorites(product.id)
+                    withContext(Dispatchers.Main) {
+                        isFavorite = favorite
+                        updateFavoriteIcon(favorite)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
             }
         }
     }
 
-    private fun addToCart(product: Product) {
-        CoroutineScope(Dispatchers.IO).launch {
-            val success = cartRepository.addToCart(product)
+    private fun setupClickListeners() {
+        // Кнопка избранного
+        binding.btnFavorite.setOnClickListener {
+            toggleFavorite()
+        }
 
-            CoroutineScope(Dispatchers.Main).launch {
-                if (success) {
+        // Кнопка добавления в корзину
+        binding.btnAddToCart.setOnClickListener {
+            currentProduct?.let { product ->
+                addToCart(product)
+            }
+        }
+    }
+
+    private fun toggleFavorite() {
+        currentProduct?.let { product ->
+            // Блокируем кнопку на время операции
+            binding.btnFavorite.isEnabled = false
+
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val success = if (isFavorite) {
+                        // Удаляем из избранного
+                        favoritesRepository.removeFromFavorites(product.id)
+                    } else {
+                        // Добавляем в избранное
+                        favoritesRepository.addToFavorites(product)
+                    }
+
+                    withContext(Dispatchers.Main) {
+                        if (success) {
+                            isFavorite = !isFavorite
+                            updateFavoriteIcon(isFavorite)
+
+                            val message = if (isFavorite) {
+                                "Товар добавлен в избранное"
+                            } else {
+                                "Товар удален из избранного"
+                            }
+                            Toast.makeText(
+                                this@ProductDetailActivity,
+                                message,
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        } else {
+                            Toast.makeText(
+                                this@ProductDetailActivity,
+                                "Ошибка при обновлении избранного",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        binding.btnFavorite.isEnabled = true
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        binding.btnFavorite.isEnabled = true
+                        Toast.makeText(
+                            this@ProductDetailActivity,
+                            "Ошибка: ${e.message}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun updateFavoriteIcon(isFavorite: Boolean) {
+        if (isFavorite) {
+            binding.btnFavorite.setImageResource(R.drawable.ic_favorite)
+            binding.btnFavorite.setColorFilter(getColor(android.R.color.holo_red_dark))
+        } else {
+            binding.btnFavorite.setImageResource(R.drawable.ic_favorite_border)
+            binding.btnFavorite.setColorFilter(null)
+        }
+    }
+
+    private fun addToCart(product: Product) {
+        if (!product.inStock) {
+            Toast.makeText(
+                this,
+                "Товар отсутствует в наличии",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
+        // Блокируем кнопку и меняем текст
+        binding.btnAddToCart.isEnabled = false
+        binding.btnAddToCart.text = "Добавление..."
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val success = cartRepository.addToCart(product)
+
+                withContext(Dispatchers.Main) {
+                    binding.btnAddToCart.isEnabled = true
+                    binding.btnAddToCart.text = "В корзину"
+
+                    if (success) {
+                        Toast.makeText(
+                            this@ProductDetailActivity,
+                            "Товар добавлен в корзину",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        Toast.makeText(
+                            this@ProductDetailActivity,
+                            "Ошибка при добавлении в корзину",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    binding.btnAddToCart.isEnabled = true
+                    binding.btnAddToCart.text = "В корзину"
                     Toast.makeText(
                         this@ProductDetailActivity,
-                        "Товар добавлен в корзину",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                } else {
-                    Toast.makeText(
-                        this@ProductDetailActivity,
-                        "Ошибка при добавлении в корзину",
+                        "Ошибка: ${e.message}",
                         Toast.LENGTH_SHORT
                     ).show()
                 }

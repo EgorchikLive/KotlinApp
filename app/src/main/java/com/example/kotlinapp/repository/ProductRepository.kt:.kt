@@ -23,23 +23,35 @@ class ProductRepository {
         }
     }
 
-    suspend fun addProduct(product: Product): Boolean {
+    suspend fun addProduct(product: Product): Product? {
         return try {
-            if (product.id.isEmpty()) {
-                productsCollection.add(product).await()
-            } else {
-                productsCollection.document(product.id).set(product).await()
-            }
-            true
+            // Создаем новый документ с автоматическим ID
+            val newDocRef = productsCollection.document()
+
+            // Создаем продукт с новым ID
+            val productWithId = product.copy(id = newDocRef.id)
+
+            // Сохраняем в Firestore
+            newDocRef.set(productWithId).await()
+
+            // Возвращаем сохраненный продукт с ID
+            productWithId
         } catch (e: Exception) {
-            false
+            null
         }
     }
 
+    // Альтернативный метод для обновления существующего продукта
     suspend fun updateProduct(product: Product): Boolean {
         return try {
-            productsCollection.document(product.id).set(product).await()
-            true
+            if (product.id.isEmpty()) {
+                // Если ID пустой, создаем новый продукт
+                addProduct(product) != null
+            } else {
+                // Обновляем существующий
+                productsCollection.document(product.id).set(product).await()
+                true
+            }
         } catch (e: Exception) {
             false
         }
@@ -59,13 +71,9 @@ class ProductRepository {
             val batch = db.batch()
 
             products.forEach { product ->
-                val docRef = if (product.id.isEmpty()) {
-                    productsCollection.document()
-                } else {
-                    productsCollection.document(product.id)
-                }
-                // Убеждаемся, что сохраняем все поля продукта
-                batch.set(docRef, product.copy(id = docRef.id))
+                val docRef = productsCollection.document()
+                val productWithId = product.copy(id = docRef.id)
+                batch.set(docRef, productWithId)
             }
 
             batch.commit().await()
@@ -75,7 +83,6 @@ class ProductRepository {
         }
     }
 
-    // Добавляем метод для получения товара по ID
     suspend fun getProductById(productId: String): Product? {
         return try {
             productsCollection.document(productId).get().await().toObject(Product::class.java)

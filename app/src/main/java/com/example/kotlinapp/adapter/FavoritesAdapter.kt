@@ -10,12 +10,12 @@ import com.bumptech.glide.request.RequestOptions
 import com.example.kotlinapp.databinding.ItemProductBinding
 import kotlinx.coroutines.*
 
-class ProductAdapter(
+class FavoritesAdapter(
     private var products: List<Product> = listOf(),
     private val onItemClick: (Product) -> Unit,
-    private val onItemLongClick: (Product) -> Boolean = { false },
-    private val onFavoriteClick: (Product, Boolean) -> Unit
-) : RecyclerView.Adapter<ProductAdapter.ProductViewHolder>() {
+    private val onFavoriteClick: (Product, Boolean) -> Unit,
+    private val onItemLongClick: (Product) -> Boolean = { false }
+) : RecyclerView.Adapter<FavoritesAdapter.FavoriteViewHolder>() {
 
     private val favoritesRepository = FavoritesRepository()
     private val favoriteStatusMap = mutableMapOf<String, Boolean>()
@@ -23,14 +23,15 @@ class ProductAdapter(
     private val scope = CoroutineScope(Dispatchers.Main + job)
 
     init {
+        // Загружаем статусы избранного
         CoroutineScope(Dispatchers.Main).launch {
-            products.take(10).forEach { product ->
+            products.forEach { product ->
                 loadFavoriteStatusForProduct(product.id)
             }
         }
     }
 
-    inner class ProductViewHolder(private val binding: ItemProductBinding) :
+    inner class FavoriteViewHolder(private val binding: ItemProductBinding) :
         RecyclerView.ViewHolder(binding.root) {
 
         private var favoriteJob: Job? = null
@@ -46,7 +47,7 @@ class ProductAdapter(
                 binding.outOfStockLabel.visibility = View.GONE
             }
 
-            // Загрузка изображения по URL
+            // Загрузка изображения
             loadProductImage(product.imageUrl)
 
             // Загружаем статус избранного
@@ -54,10 +55,11 @@ class ProductAdapter(
 
             // Обработчик кнопки избранного
             binding.btnFavorite.setOnClickListener {
-                val isFavorite = favoriteStatusMap[product.id] ?: false
+                val isFavorite = favoriteStatusMap[product.id] ?: true
                 onFavoriteClick(product, !isFavorite)
             }
 
+            // Обработчик клика на весь item
             binding.root.setOnClickListener {
                 onItemClick(product)
             }
@@ -76,7 +78,6 @@ class ProductAdapter(
                     .apply(RequestOptions.bitmapTransform(RoundedCorners(8)))
                     .into(binding.productImage)
             } else {
-                // Если URL пустой, показываем заглушку
                 binding.productImage.setImageResource(R.drawable.ic_placeholder)
             }
         }
@@ -92,7 +93,9 @@ class ProductAdapter(
                     favoriteStatusMap[productId] = isFavorite
                     updateFavoriteIcon(isFavorite)
                 } catch (e: Exception) {
-                    // Игнорируем ошибки
+                    // Если ошибка, считаем что товар в избранном
+                    favoriteStatusMap[productId] = true
+                    updateFavoriteIcon(true)
                 }
             }
         }
@@ -114,21 +117,21 @@ class ProductAdapter(
                 }
                 favoriteStatusMap[productId] = isFavorite
             } catch (e: Exception) {
-                // Игнорируем ошибки
+                favoriteStatusMap[productId] = true
             }
         }
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ProductViewHolder {
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FavoriteViewHolder {
         val binding = ItemProductBinding.inflate(
             LayoutInflater.from(parent.context),
             parent,
             false
         )
-        return ProductViewHolder(binding)
+        return FavoriteViewHolder(binding)
     }
 
-    override fun onBindViewHolder(holder: ProductViewHolder, position: Int) {
+    override fun onBindViewHolder(holder: FavoriteViewHolder, position: Int) {
         holder.bind(products[position])
     }
 

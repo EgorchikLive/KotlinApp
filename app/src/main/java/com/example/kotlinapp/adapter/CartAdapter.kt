@@ -18,7 +18,7 @@ class CartAdapter(
 
         fun bind(cartItem: CartItem) {
             binding.textProductName.text = cartItem.productName
-            binding.textProductPrice.text = "$${cartItem.productPrice}"
+//            binding.textProductPrice.text = "$${cartItem.productPrice}"
             binding.textQuantity.text = cartItem.quantity.toString()
             binding.textItemTotal.text = "$${String.format("%.2f", cartItem.productPrice * cartItem.quantity)}"
 

@@ -5,6 +5,7 @@ data class Product(
     val name: String = "",
     val price: Double = 0.0,
     val imageUrl: String = "",
+    val imagePath: String = "",
     val description: String = "",  // Добавляем поле description
     val category: String = "",     // Добавляем поле category
     val inStock: Boolean = true,
