@@ -44,21 +44,18 @@ class CartRepository {
                 .await()
 
             return if (existingItemQuery.documents.isEmpty()) {
-                // Товара еще нет в корзине - добавляем новый
                 val cartItem = CartItem(
                     id = cartCollection.document().id,
                     productId = product.id,
                     productName = product.name,
                     productPrice = product.price,
                     productImageUrl = product.imageUrl,
-                    // Не добавляем description и category
                     quantity = 1,
                     addedAt = Date()
                 )
                 cartCollection.document(cartItem.id).set(cartItem).await()
                 true
             } else {
-                // Товар уже есть - увеличиваем количество
                 val existingDoc = existingItemQuery.documents.first()
                 val existingQuantity = existingDoc.getLong("quantity")?.toInt() ?: 0
                 existingDoc.reference.update("quantity", existingQuantity + 1).await()
@@ -69,7 +66,6 @@ class CartRepository {
         }
     }
 
-    // Остальные методы остаются без изменений...
     suspend fun updateCartItemQuantity(cartItemId: String, quantity: Int): Boolean {
         return try {
             if (quantity <= 0) {

@@ -9,6 +9,7 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.example.kotlinapp.databinding.FragmentFavoritesBinding
 import kotlinx.coroutines.*
 
@@ -20,6 +21,7 @@ class FavoritesFragment : Fragment() {
     private lateinit var favoritesAdapter: FavoritesAdapter
     private lateinit var favoritesRepository: FavoritesRepository
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private var loadFavoritesJob: Job? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -35,7 +37,52 @@ class FavoritesFragment : Fragment() {
 
         favoritesRepository = FavoritesRepository()
 
+        setupSwipeRefresh()
         setupRecyclerView()
+        loadFavorites()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        favoritesAdapter.cancelAllJobs()
+        loadFavoritesJob?.cancel()
+        scope.cancel()
+        _binding = null
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Обновляем список при возвращении на фрагмент
+        loadFavorites()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        loadFavoritesJob?.cancel()
+        // Останавливаем анимацию обновления если она идет
+        binding.swipeRefreshLayout.isRefreshing = false
+    }
+
+    private fun setupSwipeRefresh() {
+        // Настройка цветов индикатора обновления
+        binding.swipeRefreshLayout.setColorSchemeColors(
+            android.R.color.holo_blue_dark,
+            android.R.color.holo_green_dark,
+            android.R.color.holo_orange_dark,
+            android.R.color.holo_red_dark
+        )
+
+        // Устанавливаем слушатель обновления
+        binding.swipeRefreshLayout.setOnRefreshListener {
+            refreshFavorites()
+        }
+    }
+
+    private fun refreshFavorites() {
+        // Отменяем предыдущую загрузку
+        loadFavoritesJob?.cancel()
+
+        // Загружаем избранное заново
         loadFavorites()
     }
 
@@ -58,41 +105,59 @@ class FavoritesFragment : Fragment() {
     }
 
     private fun loadFavorites() {
-        // Показываем ProgressBar, скрываем RecyclerView и текст
-        binding.progressBar.visibility = View.VISIBLE
-        binding.recyclerViewFavorites.visibility = View.GONE
-        binding.textNoFavorites.visibility = View.GONE
+        // Отменяем предыдущую загрузку
+        loadFavoritesJob?.cancel()
 
-        scope.launch {
+        loadFavoritesJob = scope.launch {
             try {
+                // Показываем прогресс, если это не обновление свайпом
+                if (!binding.swipeRefreshLayout.isRefreshing) {
+                    binding.progressBar.visibility = View.VISIBLE
+                }
+
+                // Скрываем все элементы во время загрузки
+                binding.textNoFavorites.visibility = View.GONE
+                binding.recyclerViewFavorites.visibility = View.GONE
+
                 val favoriteProducts = withContext(Dispatchers.IO) {
+                    if (!isActive) return@withContext emptyList<Product>()
                     favoritesRepository.getFavoriteProducts()
                 }
 
-                withContext(Dispatchers.Main) {
-                    binding.progressBar.visibility = View.GONE
+                // Проверяем, что фрагмент еще отображается
+                if (!isAdded || view == null) return@launch
 
-                    if (favoriteProducts.isEmpty()) {
-                        // Нет избранных товаров - показываем текст
-                        binding.textNoFavorites.visibility = View.VISIBLE
-                        binding.recyclerViewFavorites.visibility = View.GONE
-                    } else {
-                        // Есть товары - показываем RecyclerView
-                        binding.textNoFavorites.visibility = View.GONE
-                        binding.recyclerViewFavorites.visibility = View.VISIBLE
-                        favoritesAdapter.updateProducts(favoriteProducts)
-                    }
+                if (favoriteProducts.isEmpty()) {
+                    // Нет избранных товаров - показываем текст
+                    binding.textNoFavorites.visibility = View.VISIBLE
+                    binding.textNoFavorites.text = "У вас пока нет избранных товаров"
+                    binding.recyclerViewFavorites.visibility = View.GONE
+                } else {
+                    // Есть товары - показываем RecyclerView
+                    binding.textNoFavorites.visibility = View.GONE
+                    binding.recyclerViewFavorites.visibility = View.VISIBLE
+                    favoritesAdapter.updateProducts(favoriteProducts)
                 }
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    binding.progressBar.visibility = View.GONE
+                if (e is CancellationException) {
+                    return@launch
+                }
+
+                if (isAdded && view != null) {
                     binding.textNoFavorites.visibility = View.VISIBLE
                     binding.textNoFavorites.text = "Ошибка загрузки: ${e.message}"
+                    binding.recyclerViewFavorites.visibility = View.GONE
                     Toast.makeText(
                         requireContext(),
                         "Ошибка загрузки избранного",
                         Toast.LENGTH_SHORT
                     ).show()
+                }
+            } finally {
+                if (isAdded && view != null) {
+                    binding.progressBar.visibility = View.GONE
+                    // Останавливаем анимацию обновления
+                    binding.swipeRefreshLayout.isRefreshing = false
                 }
             }
         }
@@ -105,6 +170,7 @@ class FavoritesFragment : Fragment() {
             scope.launch {
                 try {
                     val success = withContext(Dispatchers.IO) {
+                        if (!isActive) return@withContext false
                         favoritesRepository.removeFromFavorites(product.id)
                     }
 
@@ -126,6 +192,8 @@ class FavoritesFragment : Fragment() {
                         }
                     }
                 } catch (e: Exception) {
+                    if (e is CancellationException) return@launch
+
                     withContext(Dispatchers.Main) {
                         Toast.makeText(
                             requireContext(),
@@ -150,18 +218,5 @@ class FavoritesFragment : Fragment() {
             putExtra("PRODUCT_RATING", product.rating)
         }
         startActivity(intent)
-    }
-
-    override fun onResume() {
-        super.onResume()
-        // Обновляем список при возвращении на фрагмент
-        loadFavorites()
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        favoritesAdapter.cancelAllJobs()
-        scope.cancel()
-        _binding = null
     }
 }

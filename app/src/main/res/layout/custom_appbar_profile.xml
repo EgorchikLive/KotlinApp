@@ -4,38 +4,42 @@
     android:layout_width="match_parent"
     android:layout_height="80dp"
     android:background="?attr/colorPrimary"
-    android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:paddingTop="24dp"
-    android:paddingBottom="16dp"
+    android:gravity="center_vertical"
     android:paddingStart="16dp"
     android:paddingEnd="16dp">
 
     <!-- Кнопка назад -->
     <ImageButton
-        android:id="@+id/back_button"
+        android:id="@+id/backButton"
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:background="?attr/selectableItemBackgroundBorderless"
-        android:scaleType="center"
         android:src="@drawable/ic_arrow_back"
+        android:contentDescription="Назад"
         android:tint="@android:color/white" />
+
+    <!-- Иконка профиля (скрыта в деталях заказа) -->
+    <de.hdodenhof.circleimageview.CircleImageView
+        android:id="@+id/profileIcon"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginStart="8dp"
+        android:src="@drawable/ic_profile_placeholder"
+        android:visibility="gone"
+        app:civ_border_width="2dp"
+        app:civ_border_color="@android:color/white" />
 
     <!-- Заголовок -->
     <TextView
-        android:id="@+id/toolbar_title"
+        android:id="@+id/toolbarTitle"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:text="Профиль"
+        android:layout_marginStart="12dp"
+        android:text="Детали заказа"
         android:textColor="@android:color/white"
         android:textSize="20sp"
-        android:textStyle="bold"
-        android:gravity="center" />
-
-    <!-- Пустое view для симметрии -->
-    <View
-        android:layout_width="48dp"
-        android:layout_height="48dp" />
+        android:textStyle="bold" />
 
 </LinearLayout>

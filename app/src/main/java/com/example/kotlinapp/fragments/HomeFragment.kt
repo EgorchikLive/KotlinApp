@@ -7,6 +7,7 @@ import android.view.*
 import android.widget.Toast
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.example.kotlinapp.databinding.FragmentHomeBinding
@@ -49,6 +50,7 @@ class HomeFragment : SafeFragment() {
         productRepository = ProductRepository()
         favoritesRepository = FavoritesRepository()
 
+        setupSwipeRefresh()
         setupRecyclerView()
         loadProducts()
         checkUserRole()
@@ -63,6 +65,31 @@ class HomeFragment : SafeFragment() {
         super.onStop()
         // Отменяем загрузку при остановке фрагмента
         productsLoadJob?.cancel()
+        // Останавливаем анимацию обновления если она идет
+        binding.swipeRefreshLayout.isRefreshing = false
+    }
+
+    private fun setupSwipeRefresh() {
+        // Настройка цветов индикатора обновления
+        binding.swipeRefreshLayout.setColorSchemeColors(
+            android.R.color.holo_blue_dark,
+            android.R.color.holo_green_dark,
+            android.R.color.holo_orange_dark,
+            android.R.color.holo_red_dark
+        )
+
+        // Устанавливаем слушатель обновления
+        binding.swipeRefreshLayout.setOnRefreshListener {
+            refreshProducts()
+        }
+    }
+
+    private fun refreshProducts() {
+        // Отменяем предыдущую загрузку
+        productsLoadJob?.cancel()
+
+        // Загружаем продукты заново
+        loadProducts()
     }
 
     private fun checkUserRole() {
@@ -148,7 +175,10 @@ class HomeFragment : SafeFragment() {
 
         productsLoadJob = safeLaunch {
             try {
-                binding.progressBar.visibility = View.VISIBLE
+                // Показываем прогресс, если это не обновление свайпом
+                if (!binding.swipeRefreshLayout.isRefreshing) {
+                    binding.progressBar.visibility = View.VISIBLE
+                }
                 binding.emptyState.visibility = View.GONE
 
                 val products = withContext(Dispatchers.IO) {
@@ -182,6 +212,8 @@ class HomeFragment : SafeFragment() {
                 // Убираем прогресс бар только если фрагмент активен
                 if (isAdded && view != null) {
                     binding.progressBar.visibility = View.GONE
+                    // Останавливаем анимацию обновления
+                    binding.swipeRefreshLayout.isRefreshing = false
                 }
             }
         }
@@ -251,7 +283,7 @@ class HomeFragment : SafeFragment() {
                         if (isAdded) {
                             if (success) {
                                 Toast.makeText(requireContext(), "Товар удален", Toast.LENGTH_SHORT).show()
-                                loadProducts()
+                                refreshProducts() // Обновляем список после удаления
                             } else {
                                 Toast.makeText(requireContext(), "Ошибка удаления", Toast.LENGTH_SHORT).show()
                             }
@@ -364,7 +396,7 @@ class HomeFragment : SafeFragment() {
 
                 if (isAdded && success) {
                     Toast.makeText(requireContext(), "Товары загружены в Firestore", Toast.LENGTH_SHORT).show()
-                    loadProducts()
+                    refreshProducts() // Обновляем список после загрузки
                 } else if (isAdded) {
                     Toast.makeText(requireContext(), "Ошибка загрузки товаров", Toast.LENGTH_SHORT).show()
                 }

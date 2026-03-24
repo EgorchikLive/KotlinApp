@@ -51,7 +51,7 @@ dependencies {
     implementation("com.google.firebase:firebase-auth:21.0.0")
     implementation("com.google.firebase:firebase-firestore:24.0.0")
     implementation("com.google.android.gms:play-services-auth:20.7.0")
-    implementation("com.google.android.material:material:1.9.0")
+    implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.navigation:navigation-fragment-ktx:2.6.0")
     implementation("androidx.navigation:navigation-ui-ktx:2.6.0")
     implementation("com.github.bumptech.glide:glide:4.16.0")
@@ -64,9 +64,8 @@ dependencies {
     // Lifecycle
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.7.0")
-//    implementation(libs.firebase.storage.ktx)
-//
-//    annotationProcessor ("com.github.bumptech.glide:compiler:4.16.0")
+    implementation ("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
+    implementation ("de.hdodenhof:circleimageview:3.1.0")
 
     // Navigation
     implementation("androidx.navigation:navigation-fragment-ktx:2.7.5")

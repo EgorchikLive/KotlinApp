@@ -7,6 +7,7 @@ import androidx.fragment.app.Fragment
 import com.google.firebase.auth.FirebaseAuth
 import com.example.kotlinapp.databinding.ActivityMainBinding
 import com.example.kotlinapp.databinding.CustomAppbarBinding
+import com.example.kotlinapp.fragments.CartFragment
 
 class MainActivity : AppCompatActivity() {
 

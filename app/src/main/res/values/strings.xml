@@ -3,4 +3,31 @@
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="default_web_client_id">1001989212540-tlc1selfm9k4uis674od8lqldkrjtpbu.apps.googleusercontent.com</string>
+    <string name="address_not_set">Адрес не указан</string>
+    <string name="total_orders">Всего заказов: %d</string>
+    <string name="recent_orders">Последние заказы</string>
+    <string name="no_orders">У вас пока нет заказов</string>
+    <string name="error_loading_orders">Ошибка загрузки заказов</string>
+    <string name="collapse">Свернуть</string>
+    <string name="show_all_orders">Показать все заказы</string>
+    <string name="login_method">Способ входа: %s</string>
+    <string name="email_verified">Email подтвержден: %s</string>
+    <string name="account_created">Аккаунт создан: %s</string>
+    <string name="last_login">Последний вход: %s</string>
+    <string name="admin">Администратор</string>
+    <string name="customer">Покупатель</string>
+    <string name="user">Пользователь</string>
+    <string name="not_specified">Не указан</string>
+    <string name="unknown">Неизвестно</string>
+    <string name="yes">Да</string>
+    <string name="no">Нет</string>
+    <string name="edit_profile">Редактировать профиль</string>
+    <string name="save">Сохранить</string>
+    <string name="cancel">Отмена</string>
+    <string name="name_updated">Имя обновлено</string>
+    <string name="error_update">Ошибка обновления</string>
+    <string name="shipping_address">Адрес доставки</string>
+    <string name="address_saved">Адрес сохранен</string>
+    <string name="error_saving_address">Ошибка сохранения адреса</string>
+    <string name="phone">Тел</string>
 </resources>
